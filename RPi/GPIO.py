@@ -1,4 +1,6 @@
 import warnings
+from time import sleep
+from threading import Event
 
 import lgpio
 
@@ -49,15 +51,32 @@ def _check(result):
     return result
 
 
+def _retry(func, *args, _count=3, _delay=0.001, **kwargs):
+    # Under certain circumstances (usually multiple concurrent processes
+    # accessing the same GPIO device), GPIO functions can return "GPIO_BUSY".
+    # In this case the operation should simply be retried after a delay.
+    for i in range(_count):
+        result = func(*args, **kwargs)
+        if result != lgpio.GPIO_BUSY:
+            return _check(result)
+        sleep(_delay)
+    raise RuntimeError(lgpio.error_text(lgpio.GPIO_BUSY))
+
+
 def _to_gpio(channel):
     if _mode == UNKNOWN:
         raise RuntimeError(
             'Please set pin numbering mode using GPIO.setmode(GPIO.BOARD) or '
             'GPIO.setmode(GPIO.BCM)')
     elif _mode == BCM:
+        if not 0 <= channel < 54:
+            raise ValueError('The channel sent is invalid on a Raspberry Pi')
         return channel
     elif _mode == BOARD:
-        return _BOARD_MAP[channel]
+        try:
+            return _BOARD_MAP[channel]
+        except KeyError:
+            raise ValueError('The channel sent is invalid on a Raspberry Pi')
     else:
         assert False, 'Invalid channel mode'
 
@@ -129,7 +148,38 @@ def setwarnings(value):
     _warnings = bool(value)
 
 
+def gpio_function(channel):
+    """
+    Return the current GPIO function (:data:`IN`, :data:`OUT`, :data:`PWM`,
+    :data:`SERIAL`, :data:`I2C`, :data:`SPI`) for the specified *channel*.
+
+    .. note::
+
+        This function will only return :data:`IN` or :data:`OUT` under
+        rpi-lgpio as the underlying kernel device cannot report the alt-mode of
+        GPIO pins.
+
+    :param int channel:
+        The board pin number or BCM number depending on :func:`setmode`
+    """
+    gpio = _to_gpio(channel)
+    mode = _check(lgpio.gpio_get_mode(_chip, gpio))
+    if mode & 0x2:
+        return OUT
+    else:
+        return IN
+
+
 def cleanup(chanlist=None):
+    """
+    Reset the specified GPIO channels (or all channels if none are specified)
+    to INPUT with no pull-up / pull-down and no event detection.
+
+    :type chanlist: list or tuple or int or None
+    :param chanlist:
+        The channel, or channels to clean up
+    """
+    global _chip, _mode
     if _chip is None:
         return
 
@@ -139,20 +189,24 @@ def cleanup(chanlist=None):
     if chanlist is None:
         # It's awfully tempting to just re-initialize here, but that doesn't
         # reset pins to inputs, and users may be relying upon this behaviour
-        result, gpios, * = lgpio.gpio_get_chip_info(_chip)
+        result, gpios, *tail = lgpio.gpio_get_chip_info(_chip)
         _check(result)
         chanlist = [gpio for gpio in range(gpios) if _in_use(gpio)]
     else:
         chanlist = _gpio_list(chanlist)
 
-    for gpio in chanlist:
-        # As this is cleanup we ignore all errors (no _check calls); if we
-        # didn't own the GPIO, we don't care
-        lgpio.gpio_claim_input(_chip, gpio, lgpio.SET_BIAS_DISABLE)
-        lgpio.gpio_free(_chip, gpio)
+    if chanlist:
+        for gpio in chanlist:
+            # As this is cleanup we ignore all errors (no _check calls); if we
+            # didn't own the GPIO, we don't care
+            lgpio.gpio_claim_input(_chip, gpio, lgpio.SET_BIAS_DISABLE)
+            lgpio.gpio_free(_chip, gpio)
+    elif _warnings:
+        warnings.warn(Warning(
+            'No channels have been set up yet - nothing to clean up!  Try '
+            'cleaning up at the end of your program instead!'))
 
     if close:
-        global _chip, _mode
         lgpio.gpiochip_close(_chip)
         _chip = None
         _mode = UNKNOWN
@@ -208,32 +262,27 @@ def setup(chanlist, direction, pull_up_down=None, initial=None):
         raise ValueError('An invalid direction was passed to setup()')
 
     for gpio in _gpio_list(chanlist):
-        _setup_one(gpio, direction, pull_up_down, initial)
-
-
-def _setup_one(gpio, direction, pull, initial):
-    # We don't bother with warnings about GPIOs already in use here because
-    # if we try to *use* a GPIO already in use, things are going to blow up
-    # shortly anyway. We do deal with the pull-up warning, but only for GPIO2
-    # and GPIO3 because we're not supporting the original RPi so we don't need
-    # to worry about the GPIO0 and GPIO1 discrepancy
-    if _warnings and gpio in (2, 3) and pull in (PUD_UP, PUD_DOWN):
-        warnings.warn(
-            Warning('A physical pull up resistor is fitted on this channel!'))
-
-    if direction == IN:
-        _check(lgpio.gpio_claim_input(_chip, gpio, {
-            PUD_OFF:  lgpio.SET_BIAS_DISABLE,
-            PUD_DOWN: lgpio.SET_BIAS_PULL_DOWN,
-            PUD_UP:   lgpio.SET_BIAS_PULL_UP,
-        }[pull]))
-    elif direction == OUT:
-        if initial is None:
-            initial = _check(lgpio.gpio_read(_chip, gpio))
-        _check(lgpio.gpio_claim_output(
-            _chip, gpio, initial, lgpio.SET_BIAS_DISABLE))
-    else:
-        assert False, 'Invalid direction'
+        # We don't bother with warnings about GPIOs already in use here because
+        # if we try to *use* a GPIO already in use, things are going to blow up
+        # shortly anyway. We do deal with the pull-up warning, but only for
+        # GPIO2 and GPIO3 because we're not supporting the original RPi so we
+        # don't need to worry about the GPIO0 and GPIO1 discrepancy
+        if _warnings and gpio in (2, 3) and pull in (PUD_UP, PUD_DOWN):
+            warnings.warn(Warning(
+                'A physical pull up resistor is fitted on this channel!'))
+        if direction == IN:
+            _check(lgpio.gpio_claim_input(_chip, gpio, {
+                PUD_OFF:  lgpio.SET_BIAS_DISABLE,
+                PUD_DOWN: lgpio.SET_BIAS_PULL_DOWN,
+                PUD_UP:   lgpio.SET_BIAS_PULL_UP,
+            }[pull_up_down]))
+        elif direction == OUT:
+            if initial is None:
+                initial = _check(lgpio.gpio_read(_chip, gpio))
+            _check(lgpio.gpio_claim_output(
+                _chip, gpio, initial, lgpio.SET_BIAS_DISABLE))
+        else:
+            assert False, 'Invalid direction'
 
 
 def input(channel):
@@ -244,7 +293,7 @@ def input(channel):
     returned will be the last state set on the GPIO.
 
     :param int channel:
-        The board pin number or BCM number depending on :func:`setmode`.
+        The board pin number or BCM number depending on :func:`setmode`
     """
     gpio = _to_gpio(channel)
     if not _in_use(gpio):
@@ -287,3 +336,59 @@ def output(channel, value):
     for gpio, value in zip(gpios, values):
         _check(lgpio.gpio_write(_chip, gpio, value))
 
+
+def wait_for_edge(channel, edge, bouncetime=None, timeout=None):
+    """
+    Wait for an *edge* on the specified *channel*. Returns *channel* or
+    :data:`None` if *timeout* elapses before the specified edge occurs.
+
+    .. note::
+
+        Debounce works significantly differently in rpi-lgpio than it does
+        in rpi-gpio; please see :doc:`debounce` for more information on the
+        differences.
+
+    :param int channel:
+        The GPIO channel to watch for edges
+
+    :param int edge:
+        One of the constants :data:`RISING`, :data:`FALLING`, or :data:`BOTH`
+
+    :type bouncetime: int or None
+    :param bouncetime:
+        Time (in ms) used to debounce signals
+
+    :type timeout: int or None
+    :param timeout:
+        Maximum time (in ms) to wait for the edge
+    """
+    gpio = _to_gpio(channel)
+    mode = _check(lgpio.gpio_get_mode(_chip, gpio))
+    if not mode & 0x100:
+        raise RuntimeError('You must setup() the GPIO channel as an input first')
+    if edge not in (FALLING, RISING, BOTH):
+        raise ValueError('The edge must be set to RISING, FALLING or BOTH')
+    if bouncetime is not None and bouncetime <= 0:
+        raise ValueError('Bouncetime must be greater than 0')
+    if timeout is not None and timeout <= 0:
+        raise ValueError('Timeout must be greater than 0')
+
+    _check(lgpio.gpio_claim_alert(_chip, gpio, {
+        RISING:  lgpio.RISING_EDGE,
+        FALLING: lgpio.FALLING_EDGE,
+        BOTH:    lgpio.BOTH_EDGES,
+    }[edge], mode & 0b11100000))
+    if bouncetime is not None:
+        _check(lgpio.gpio_set_debounce_micros(_chip, gpio, bouncetime * 1000))
+    if timeout is not None:
+        timeout /= 1000
+
+    evt = Event()
+    cb = lgpio.callback(_chip, gpio, func=lambda *args: evt.set())
+    if evt.wait(timeout):
+        result = channel
+    else:
+        result = None
+    cb.cancel()
+    _retry(lgpio.gpio_claim_input, _chip, gpio, mode & 0b11100000)
+    return result
