@@ -4,6 +4,15 @@ from threading import Event
 
 import lgpio
 
+try:
+    # Patch several constants which changed incompatibly between 0.1.6.0
+    # (jammy) and 0.2.0.0 (kinetic)
+    lgpio.SET_PULL_NONE
+except AttributeError:
+    lgpio.SET_PULL_NONE = lgpio.SET_BIAS_DISABLE
+    lgpio.SET_PULL_UP = lgpio.SET_BIAS_PULL_UP
+    lgpio.SET_PULL_DOWN = lgpio.SET_BIAS_PULL_DOWN
+
 UNKNOWN = -1
 BOARD = 10
 BCM = 11
@@ -199,7 +208,7 @@ def cleanup(chanlist=None):
         for gpio in chanlist:
             # As this is cleanup we ignore all errors (no _check calls); if we
             # didn't own the GPIO, we don't care
-            lgpio.gpio_claim_input(_chip, gpio, lgpio.SET_BIAS_DISABLE)
+            lgpio.gpio_claim_input(_chip, gpio, lgpio.SET_PULL_NONE)
             lgpio.gpio_free(_chip, gpio)
     elif _warnings:
         warnings.warn(Warning(
@@ -272,15 +281,15 @@ def setup(chanlist, direction, pull_up_down=None, initial=None):
                 'A physical pull up resistor is fitted on this channel!'))
         if direction == IN:
             _check(lgpio.gpio_claim_input(_chip, gpio, {
-                PUD_OFF:  lgpio.SET_BIAS_DISABLE,
-                PUD_DOWN: lgpio.SET_BIAS_PULL_DOWN,
-                PUD_UP:   lgpio.SET_BIAS_PULL_UP,
+                PUD_OFF:  lgpio.SET_PULL_NONE,
+                PUD_DOWN: lgpio.SET_PULL_DOWN,
+                PUD_UP:   lgpio.SET_PULL_UP,
             }[pull_up_down]))
         elif direction == OUT:
             if initial is None:
                 initial = _check(lgpio.gpio_read(_chip, gpio))
             _check(lgpio.gpio_claim_output(
-                _chip, gpio, initial, lgpio.SET_BIAS_DISABLE))
+                _chip, gpio, initial, lgpio.SET_PULL_NONE))
         else:
             assert False, 'Invalid direction'
 
