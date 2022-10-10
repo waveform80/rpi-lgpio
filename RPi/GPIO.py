@@ -1,3 +1,4 @@
+import sys
 import warnings
 from time import sleep
 from threading import Event
@@ -44,26 +45,168 @@ _BOARD_MAP = {
     18: 24, 19: 10, 21: 9, 22: 25, 23: 11, 24: 8, 26: 7, 29: 5, 31: 6, 32: 12,
     33: 13, 35: 19, 36: 16, 37: 26, 38: 20, 40: 21,
 }
+_BCM_MAP = {channel: gpio for (gpio, channel) in _BOARD_MAP.items()}
 
 _mode = UNKNOWN
 _chip = None
-_reserved = {}
 _warnings = True
+
+# Mapping of GPIO number to list of lgpio callback objects. The first of these
+# will *always* be a default tally callback. Any additional callbacks activate
+# user specified functions
+_alert = {}
+class _Alert:
+    """
+    A trivial class encapsulating a single GPIO set for alerts. Stores the
+    edge (which we override with the gpiochip API2 result, if available), the
+    bouncetime (which we can't get from anywhere else), the default tally
+    callback, and the list of user callbacks.
+    """
+    def __init__(self, gpio, edge, bouncetime=None):
+        self.gpio = gpio
+        self._edge = edge
+        self.bouncetime = bouncetime
+        self.callbacks = []
+        self._detected = False
+        if bouncetime is not None:
+            _check(lgpio.gpio_set_debounce_micros(
+                _chip, gpio, bouncetime * 1000))
+        self._callback = lgpio.callback(_chip, gpio, self._call)
+
+    def close(self):
+        self._callback.cancel()
+
+    def _call(self, chip, gpio, level, timestamp):
+        if level == 2:
+            # Watchdog timeout; this *shouldn't* happen as we never use this
+            # part of lgpio but if there's something else messing with the API
+            # other than this shim it's a possibility
+            return
+        self._detected = True
+        for cb in self._callbacks:
+            try:
+                cb(_from_gpio(gpio))
+            except Exception as exc:
+                # Yes, this is what RPi.GPIO does
+                print(exc, file=sys.stderr)
+
+    @property
+    def edge(self):
+        # Attempt to determine the edges for this alert from gpiochip API2. If
+        # this results in no edges, we're on gpiochip API1, so use the stored
+        # value.
+        mode = (lgpio.gpio_get_mode(_chip, self.gpio) >> 17) & 3
+        try:
+            return {
+                1: lgpio.RISING_EDGE,
+                2: lgpio.FALLING_EDGE,
+                3: lgpio.BOTH_EDGES,
+            }[mode]
+        except KeyError:
+            return self._edge
+
+    @property
+    def detected(self):
+        if self._detected:
+            self._detected = False
+            return True
+        return False
 
 
 def _check(result):
-    # Many lgpio functions return <0 on error; this simple function just
-    # converts any result<0 to the appropriate RuntimeError message and passes
-    # non-negative results back to the caller
+    """
+    Many lgpio functions return <0 on error; this simple function just converts
+    any *result* less than zero to the appropriate :exc:`RuntimeError` message
+    and passes non-negative results back to the caller.
+    """
     if result < 0:
         raise RuntimeError(lgpio.error_text(result))
     return result
 
 
+def _check_input(mode):
+    """
+    Raises :exc:`RuntimeError` if *mode* (as returned by
+    :func:`lgpio.gpio_get_mode`) does not indicate that the GPIO is configured
+    for "Input" or "Alert".
+    """
+    if not mode & 0x500:
+        raise RuntimeError('You must setup() the GPIO channel as an input first')
+
+
+def _check_edge(edge):
+    """
+    Checks *edge* is a valid value.
+    """
+    if edge not in (FALLING, RISING, BOTH):
+        raise ValueError('The edge must be set to RISING, FALLING or BOTH')
+
+
+def _check_bounce(bouncetime):
+    """
+    Checks *bouncetime* is :data:`None` or a positive value.
+    """
+    if bouncetime is not None and bouncetime <= 0:
+        raise ValueError('Bouncetime must be greater than 0')
+
+
+def _set_alert(gpio, mode, edge, bouncetime):
+    """
+    Set up alerts on a *gpio*. The *mode* is the current GPIO mode as returned
+    by :func:`lgpio.gpio_get_mode`. The *edge* is the desired edge detection,
+    and *bouncetime* the desired debounce delay.
+
+    If the GPIO is already being monitored for alerts with compatible *edge*
+    and *bouncetime* parameters, the existing :class:`_Alert` instance is
+    returned. If the GPIO is not being monitored, it is configured and a new
+    :class:`_Alert` instance is returned. If the GPIO is already being
+    monitored with incompatible *edge* or *bouncetime* values, a
+    :exc:`RuntimeError` is raised.
+    """
+    if mode & 0x400:
+        try:
+            alert = _alerts[gpio]
+        except KeyError:
+            pass
+        else:
+            if alert.edge != edge or alert.bouncetime != bouncetime:
+                raise RuntimeError(
+                    'Conflicting edge detection already enabled for this GPIO '
+                    'channel')
+            return alert
+    _check(lgpio.gpio_claim_alert(_chip, gpio, {
+        RISING:  lgpio.RISING_EDGE,
+        FALLING: lgpio.FALLING_EDGE,
+        BOTH:    lgpio.BOTH_EDGES,
+    }[edge], mode & 0b11100000))
+    if bouncetime is not None:
+        _check(lgpio.gpio_set_debounce_micros(
+            _chip, gpio, bouncetime * 1000))
+    alert = _Alert(gpio, edge, bouncetime)
+    _alerts[gpio] = alert
+    return alert
+
+
+def _unset_alert(gpio):
+    """
+    Remove alerts on *gpio*. This doesn't actually remove the claimed alert
+    status (in lgpio parlance), but it does cancel all associated callbacks and
+    remove the relevant :class:`_Alert` instance.
+    """
+    try:
+        alert = _alerts.pop(gpio)
+    except KeyError:
+        pass
+    else:
+        alert.close()
+
+
 def _retry(func, *args, _count=3, _delay=0.001, **kwargs):
-    # Under certain circumstances (usually multiple concurrent processes
-    # accessing the same GPIO device), GPIO functions can return "GPIO_BUSY".
-    # In this case the operation should simply be retried after a delay.
+    """
+    Under certain circumstances (usually multiple concurrent processes
+    accessing the same GPIO device), GPIO functions can return "GPIO_BUSY". In
+    this case the operation should simply be retried after a delay.
+    """
     for i in range(_count):
         result = func(*args, **kwargs)
         if result != lgpio.GPIO_BUSY:
@@ -73,6 +216,10 @@ def _retry(func, *args, _count=3, _delay=0.001, **kwargs):
 
 
 def _to_gpio(channel):
+    """
+    Converts *channel* to a GPIO number, according to the globally set
+    :data:`_mode`.
+    """
     if _mode == UNKNOWN:
         raise RuntimeError(
             'Please set pin numbering mode using GPIO.setmode(GPIO.BOARD) or '
@@ -90,9 +237,26 @@ def _to_gpio(channel):
         assert False, 'Invalid channel mode'
 
 
+def _from_gpio(gpio):
+    """
+    Converts *gpio* to a channel number, according to the globally set
+    :data:`_mode`.
+    """
+    if _mode == BCM:
+        return gpio
+    elif _mode == BOARD:
+        return _BCM_MAP[gpio]
+    else:
+        raise RuntimeError(
+            'Please set pin numbering mode using GPIO.setmode(GPIO.BOARD) or '
+            'GPIO.setmode(GPIO.BCM)')
+
+
 def _gpio_list(chanlist):
-    # Convert chanlist which may be an iterable, or an int, to a tuple of
-    # integers
+    """
+    Convert *chanlist* which may be an iterable, or an int, to a tuple of
+    integers
+    """
     try:
         return tuple(_to_gpio(int(channel)) for channel in chanlist)
     except TypeError:
@@ -104,8 +268,11 @@ def _gpio_list(chanlist):
 
 
 def _in_use(gpio):
-    # LG bits (256, 512, 1024, 2048) are only set if the calling process owns
-    # the GPIO
+    """
+    Returns :data:`True` if the GPIO has been "claimed" by lgpio. lgpio mode
+    bits (256, 512, 1024, 2048) are only set if the calling process owns the
+    GPIO.
+    """
     return bool(_check(lgpio.gpio_get_mode(_chip, gpio)) & 0b111100000000)
 
 
@@ -286,6 +453,7 @@ def setup(chanlist, direction, pull_up_down=None, initial=None):
                 PUD_UP:   lgpio.SET_PULL_UP,
             }[pull_up_down]))
         elif direction == OUT:
+            _unset_alert(gpio)
             if initial is None:
                 initial = _check(lgpio.gpio_read(_chip, gpio))
             _check(lgpio.gpio_claim_output(
@@ -358,7 +526,8 @@ def wait_for_edge(channel, edge, bouncetime=None, timeout=None):
         differences.
 
     :param int channel:
-        The GPIO channel to watch for edges
+        The board pin number or BCM number depending on :func:`setmode` to
+        watch for changes
 
     :param int edge:
         One of the constants :data:`RISING`, :data:`FALLING`, or :data:`BOTH`
@@ -373,31 +542,106 @@ def wait_for_edge(channel, edge, bouncetime=None, timeout=None):
     """
     gpio = _to_gpio(channel)
     mode = _check(lgpio.gpio_get_mode(_chip, gpio))
-    if not mode & 0x100:
-        raise RuntimeError('You must setup() the GPIO channel as an input first')
-    if edge not in (FALLING, RISING, BOTH):
-        raise ValueError('The edge must be set to RISING, FALLING or BOTH')
-    if bouncetime is not None and bouncetime <= 0:
-        raise ValueError('Bouncetime must be greater than 0')
+    _check_input(mode)
+    _check_edge(edge)
+    _check_bounce(bouncetime)
     if timeout is not None and timeout <= 0:
         raise ValueError('Timeout must be greater than 0')
 
-    _check(lgpio.gpio_claim_alert(_chip, gpio, {
-        RISING:  lgpio.RISING_EDGE,
-        FALLING: lgpio.FALLING_EDGE,
-        BOTH:    lgpio.BOTH_EDGES,
-    }[edge], mode & 0b11100000))
-    if bouncetime is not None:
-        _check(lgpio.gpio_set_debounce_micros(_chip, gpio, bouncetime * 1000))
+    alert = _set_alert(gpio, mode, edge, bouncetime)
+    alert.callbacks.append(lambda i: evt.set())
     if timeout is not None:
         timeout /= 1000
-
     evt = Event()
-    cb = lgpio.callback(_chip, gpio, func=lambda *args: evt.set())
     if evt.wait(timeout):
         result = channel
     else:
         result = None
-    cb.cancel()
-    _retry(lgpio.gpio_claim_input, _chip, gpio, mode & 0b11100000)
+    _unset_alert(gpio)
     return result
+
+
+def add_event_detect(channel, edge, callback=None, bouncetime=None):
+    """
+    Start background *edge* detection on the specified GPIO *channel*.
+
+    If *callback* is specified, it must be a callable that will be executed
+    when the specified *edge* is seen on the GPIO *channel*. The callable must
+    accept a single parameter: the channel on which the edge was detected.
+
+    :param int channel:
+        The board pin number or BCM number depending on :func:`setmode` to
+        watch for changes
+
+    :param int edge:
+        One of the constants :data:`RISING`, :data:`FALLING`, or :data:`BOTH`
+
+    :type callback: callable or None
+    :param callback:
+        The callback to run when an edge is detected; must take a single
+        integer parameter of the channel on which the edge was detected
+
+    :type bouncetime: int or None
+    :param bouncetime:
+        Time (in ms) used to debounce signals
+    """
+    if callback is not None and not callable(callback):
+        raise TypeError('Parameter must be callable')
+    gpio = _to_gpio(channel)
+    mode = _check(lgpio.gpio_get_mode(_chip, gpio))
+    _check_input(mode)
+    _check_edge(edge)
+    _check_bounce(bouncetime)
+    alert = _set_alert(gpio, mode, edge, bouncetime)
+
+    try:
+        alert = _alerts[gpio]
+    except KeyError:
+        alert = _Alert(gpio, edge, bouncetime)
+        _alerts[gpio] = alert
+    else:
+        if alert.edge != edge or alert.bouncetime != bouncetime:
+            raise RuntimeError(
+                'Conflicting edge detection already enabled for this GPIO '
+                'channel')
+    if callback is not None:
+        _alert.callbacks.append(callback)
+
+
+def add_event_callback(channel, callback):
+    """
+    Add a *callback* to the specified GPIO *channel* which must already have
+    been set for background edge detection with :func:`add_event_detect`.
+
+    :param int channel:
+        The board pin number or BCM number depending on :func:`setmode` to
+        watch for changes
+
+    :param callback:
+        The callback to run when an edge is detected; must take a single
+        integer parameter of the channel on which the edge was detected
+    """
+    if not callable(callback):
+        raise TypeError('Parameter must be callable')
+    gpio = _to_gpio(channel)
+    mode = _check(lgpio.gpio_get_mode(_chip, gpio))
+    _check_input(mode)
+    try:
+        alert = _alerts[gpio]
+    except KeyError:
+        raise RuntimeError(
+            'Add event detection using add_event_detect first before adding '
+            'a callback')
+    else:
+        alert.callbacks.append(callback)
+
+
+def remove_event_detect(channel):
+    """
+    Remove background event detection for the specified *channel*.
+
+    :param int channel:
+        The board pin number or BCM number depending on :func:`setmode` to
+        watch for changes
+    """
+    _unset_alert(_to_gpio(channel))
