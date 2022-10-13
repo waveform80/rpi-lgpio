@@ -116,10 +116,11 @@ from a "bouncy" switch, along with the positions in time where RPi.GPIO and
 rpi-lgpio would report the rising edge when debounce of 3ms is requested::
 
     0ms    2ms     4ms     6ms     8ms
-           ,-. ,-. ,-----------------.
-           | | | | |           :     |
-           | | | | |           :     |
-    -------' '-' '-'           :     '------------------------
+    |      |       |       |       |
+    |      ┌─┐ ┌─┐ ┌─────────────────┐
+    |      │ │ │ │ │           :     │
+    |      │ │ │ │ │           :     │
+    ───────┘ └─┘ └─┘           :     └────────────────────────
            :                   :
            :                   :
         RPi.GPIO             rpi-lgpio
@@ -132,10 +133,11 @@ only reports the third edge at 7ms (after it's spent 3ms stable).
 However, consider this same scenario if debounce of 2ms is requested::
 
     0ms    2ms     4ms     6ms     8ms
-           ,-. ,-. ,-----------------.
-           | | | | |       :         |
-           | | | | |       :         |
-    -------' '-' '-'       :         '------------------------
+    |      |       |       |       |
+    |      ┌─┐ ┌─┐ ┌─────────────────┐
+    |      │ │ │ │ │       :         │
+    |      │ │ │ │ │       :         │
+    ───────┘ └─┘ └─┘       :         └────────────────────────
            :       :       :
            :       :       :
        RPi.GPIO  RPi.GPIO  rpi-lgpio
@@ -154,10 +156,11 @@ One final scenario to consider is a waveform of equally spaced, repeating
 pulses (like PWM) every 2ms::
 
     0ms    2ms     4ms     6ms     8ms     10ms    12ms
-           ,----.  ,----.  ,----.  ,----.  ,----.  ,----.  ,--
-           |    |  |    |  |    |  |    |  |    |  |    |  |
-           |    |  |    |  |    |  |    |  |    |  |    |  |
-    -------'    '--'    '--'    '--'    '--'    '--'    '--'
+    |      |       |       |       |       |       |
+    |      ┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌──
+    |      │    │  │    │  │    │  │    │  │    │  │    │  │
+    |      │    │  │    │  │    │  │    │  │    │  │    │  │
+    ───────┘    └──┘    └──┘    └──┘    └──┘    └──┘    └──┘
            :               :               :               :
            :               :               :               :
       RPi.GPIO        RPi.GPIO        RPi.GPIO        RPi.GPIO
