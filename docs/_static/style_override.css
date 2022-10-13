@@ -1,0 +1,67 @@
+/* override table width restrictions */
+@media screen and (min-width: 767px) {
+    .wy-table-responsive table td, .wy-table-responsive table th {
+        /* !important prevents the common CSS stylesheets from
+           overriding this as on RTD they are loaded after this stylesheet */
+        white-space: normal !important;
+    }
+
+    .wy-table-responsive {
+        overflow: visible !important;
+    }
+}
+
+/* Sort out RTD's lacking code captions */
+.rst-content div.code-block-caption {
+    /* Copied from pre... */
+    font-family: Consolas, "Andale Mono WT", "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Liberation Mono", "Nimbus Mono L", Monaco, "Courier New", Courier, monospace;
+    font-size: 14px;
+    font-weight: bold;
+    font-style: normal;
+    text-align: left;
+    background-color: #ddd;
+    padding: 0.5em;
+}
+
+.rst-content div[class^="highlight"] {
+    border: 0 none;
+    margin-top: 0;
+}
+
+.rst-content div.code-block-caption + div.highlight-python3 {
+    margin-top: 0;
+}
+
+.rst-content div.code-block-caption a.headerlink {
+    visibility: hidden;
+}
+
+.rst-content div.code-block-caption a.headerlink::after {
+    font-family: FontAwesome;
+    font-size: 12px;
+    content: "";
+    visibility: hidden;
+}
+
+.rst-content div.code-block-caption:hover a.headerlink::after {
+    visibility: visible;
+}
+
+/* Make highlighting color a little less ugly */
+.rst-content div.highlight span.hll {
+    background-color: #ddddff;
+}
+
+/* Custom style for exercises */
+.rst-content div.admonition-exercise {
+    background: #e7fae8;
+}
+
+.rst-content div.admonition-exercise p.admonition-title {
+    background: #6ade78;
+}
+
+/* Equal spacing around content images */
+.rst-content .document img {
+    margin-bottom: 24px;
+}
