@@ -2,10 +2,10 @@
 README
 ======
 
-The rpi-lgpio is a compatibility package intended to provide compatibility with
-the rpi-gpio (aka RPi.GPIO) library, on top of kernels that only support the
-gpiochip interface (and which have removed the deprecated sysfs GPIO
-interface).
+rpi-lgpio is a compatibility package intended to provide compatibility with
+the `rpi-gpio`_ (aka RPi.GPIO) library, on top of kernels that only support the
+`gpiochip device`_ (and which have removed the `deprecated sysfs GPIO
+interface`_).
 
 .. warning::
 
@@ -13,4 +13,6 @@ interface).
     Python environment. Both packages attempt to install a module named
     RPi.GPIO and obviously this will not work.
 
-
+.. _rpi-gpio: https://pypi.org/project/RPi.GPIO/
+.. _gpiochip device: https://embeddedbits.org/new-linux-kernel-gpio-user-space-interface/
+.. _deprecated sysfs GPIO interface: https://waldorf.waveform.org.uk/2021/the-pins-they-are-a-changin.html
