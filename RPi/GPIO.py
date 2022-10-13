@@ -220,24 +220,26 @@ def _check(result):
     return result
 
 
-def _check_input(mode):
+def _check_input(mode,
+                 msg='You must setup() the GPIO channel as an input first'):
     """
     Raises :exc:`RuntimeError` if *mode* (as returned by
     :func:`lgpio.gpio_get_mode`) does not indicate that the GPIO is configured
     for "Input" or "Alert".
     """
     if not mode & (_LG_INPUT | _LG_ALERT):
-        raise RuntimeError('You must setup() the GPIO channel as an input first')
+        raise RuntimeError(msg)
 
 
-def _check_output(mode):
+def _check_output(mode,
+                  msg='You must setup() the GPIO channel as an output first'):
     """
     Raises :exc:`RuntimeError` if *mode* (as returned by
     :func:`lgpio.gpio_get_mode`) does not indicate that the GPIO is configured
     for "Output".
     """
     if not mode & _LG_OUTPUT:
-        raise RuntimeError('You must setup() the GPIO channel as an output first')
+        raise RuntimeError(msg)
 
 
 def _check_edge(edge):
@@ -620,6 +622,8 @@ def output(channel, value):
         else:
             raise RuntimeError('Number of channels != number of values')
     for gpio, value in zip(gpios, values):
+        mode = lgpio.gpio_get_mode(_chip, gpio)
+        _check_output(mode, 'The GPIO channel has not been set up as an OUTPUT')
         _check(lgpio.gpio_write(_chip, gpio, value))
 
 
@@ -631,7 +635,7 @@ def wait_for_edge(channel, edge, bouncetime=None, timeout=None):
     .. note::
 
         Debounce works significantly differently in rpi-lgpio than it does
-        in rpi-gpio; please see :doc:`debounce` for more information on the
+        in rpi-gpio; please see :ref:`debounce` for more information on the
         differences.
 
     :param int channel:
