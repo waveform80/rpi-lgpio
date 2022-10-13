@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # vim: set et sw=4 sts=4 fileencoding=utf-8:
+#
+# Copyright (c) 2022 Dave Jones <dave@waveform.org.uk>
+#
+# SPDX-License-Identifier: MIT
 
 import sys
 import os

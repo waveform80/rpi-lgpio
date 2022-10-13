@@ -1,3 +1,7 @@
+# Copyright (c) 2022 Dave Jones <dave@waveform.org.uk>
+#
+# SPDX-License-Identifier: MIT
+
 import sys
 import warnings
 from time import sleep
