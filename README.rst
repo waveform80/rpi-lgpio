@@ -11,7 +11,7 @@ interface`_).
 
     You *cannot* install rpi-lgpio and rpi-gpio at the same time, in the same
     Python environment. Both packages attempt to install a module named
-    RPi.GPIO and obviously this will not work.
+    ``RPi.GPIO`` and obviously this will not work.
 
 .. _rpi-gpio: https://pypi.org/project/RPi.GPIO/
 .. _gpiochip device: https://embeddedbits.org/new-linux-kernel-gpio-user-space-interface/
