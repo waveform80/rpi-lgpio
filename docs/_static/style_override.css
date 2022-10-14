@@ -28,6 +28,10 @@
     margin-top: 0;
 }
 
+.rst-content div.chart pre {
+    line-height: 1;
+}
+
 .rst-content div.code-block-caption + div.highlight-python3 {
     margin-top: 0;
 }

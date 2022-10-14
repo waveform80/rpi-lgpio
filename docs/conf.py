@@ -18,7 +18,7 @@ metadata = config['metadata']
 
 # -- Project information -----------------------------------------------------
 
-project = metadata['name'].title()
+project = metadata['name']
 author = metadata['author']
 copyright = '{now:%Y} {author}'.format(now=datetime.now(), author=author)
 release = metadata['version']

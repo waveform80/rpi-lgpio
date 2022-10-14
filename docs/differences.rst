@@ -6,10 +6,12 @@
 Differences
 =======================
 
-Many of the assumptions underlying RPi.GPIO -- that it has complete access to,
-and control over, the registers controlling the GPIO pins -- do not work when
-applied to the Linux gpiochip devices. To that end, while the library strives
-as far as possible to be "bug compatible" with RPi.GPIO, there *are*
+.. currentmodule:: RPi.GPIO
+
+Many of the assumptions underlying `RPi.GPIO`_ -- that it has complete access
+to, and control over, the registers controlling the GPIO pins -- do not work
+when applied to the Linux gpiochip devices. To that end, while the library
+strives as far as possible to be "bug compatible" with RPi.GPIO, there *are*
 differences in behaviour that may result in incompatibility.
 
 
@@ -17,17 +19,18 @@ Bug Compatible?
 ===============
 
 What does being "bug compatible" mean? Simply put it means it is not enough for
-the library to implement the RPi.GPIO API. It must also act, as far as is
-reasonable possible, like RPi.GPIO too. Naturally it must export the same
-functions and classes as RPi.GPIO. However it must also:
+the library to implement the `RPi.GPIO`_ API. It must also:
 
-* Raise the same exception tyes, with the same messages, in the same
+* Act, as far as possible, in the same way to the same calls with the same
+  values
+
+* Raise the same exception types, with the same messages, in the same
   circumstances
 
 * Break (i.e. fail to operate correctly) in the same way, as far as possible
 
-This may sound silly, but a library is *always* used in unexpected or
-undocumented ways by *some* applications and thus anything that tries to take
+This last point may sound silly, but a library is *always* used in unexpected
+or undocumented ways by *some* applications. Thus anything that tries to take
 the place of that library must do more than simply operate the same as the
 "documented surface" would suggest.
 
@@ -85,7 +88,7 @@ allocate it:
     >>> GPIO.setup(26, GPIO.OUT)
     Traceback (most recent call last):
       File "<stdin>", line 1, in <module>
-      File "/home/dave/projects/home/rpi-lgpio/rpi-lgpio/RPi/GPIO.py", line 569, in setup
+      File "/home/dave/projects/rpi-lgpio/rpi-lgpio/RPi/GPIO.py", line 569, in setup
         initial = _check(lgpio.gpio_read(_chip, gpio))
       File "/home/dave/envs/rpi-lgpio/lib/python3.10/site-packages/lgpio.py", line 894, in gpio_read
         return _u2i(_lgpio._gpio_read(handle&0xffff, gpio))
@@ -94,7 +97,7 @@ allocate it:
     lgpio.error: 'GPIO not allocated'
 
 
-.. _debounce
+.. _debounce:
 
 Debounce
 ========
@@ -117,7 +120,10 @@ For some applications, there will be little/no difference other than rpi-lgpio
 reporting an edge a few milliseconds later than RPi.GPIO would (specifically,
 by the amount of debounce requsted). The following diagram shows the waveform
 from a "bouncy" switch, along with the positions in time where RPi.GPIO and
-rpi-lgpio would report the rising edge when debounce of 3ms is requested::
+rpi-lgpio would report the rising edge when debounce of 3ms is requested:
+
+.. code-block::
+   :class: chart
 
     0ms    2ms     4ms     6ms     8ms
     |      |       |       |       |
@@ -134,7 +140,10 @@ because they are within 3ms of the last edge. By contrast, rpi-lgpio ignores
 the first and second rising edges (because they didn't stay stable for 3ms) and
 only reports the third edge at 7ms (after it's spent 3ms stable).
 
-However, consider this same scenario if debounce of 2ms is requested::
+However, consider this same scenario if debounce of 2ms is requested:
+
+.. code-block::
+   :class: chart
 
     0ms    2ms     4ms     6ms     8ms
     |      |       |       |       |
@@ -157,7 +166,10 @@ with rpi-lgpio, than with RPi.GPIO. They will still debounce effectively, but
 will reduce the delay in reporting edges.
 
 One final scenario to consider is a waveform of equally spaced, repeating
-pulses (like PWM) every 2ms::
+pulses (like PWM) every 2ms:
+
+.. code-block::
+   :class: chart
 
     0ms    2ms     4ms     6ms     8ms     10ms    12ms
     |      |       |       |       |       |       |
@@ -174,4 +186,49 @@ half of the edges; it's suppressing every other edge as they occur within 3ms
 of the edge preceding them. rpi-lgpio, on the other hand, reports *no* edges at
 all because none of them stay stable for 3ms.
 
+
+PWM on inputs
+=============
+
+RPi.GPIO permits (probably erroneously), PWM objects to continue operating on
+pins that are switched to inputs:
+
+.. code-block:: pycon
+
+    >>> from RPi import GPIO
+    >>> GPIO.setmode(GPIO.BCM)
+    >>> GPIO.setup(26, GPIO.OUT)
+    >>> p = GPIO.PWM(26, 1000)
+    >>> p.start(75)
+    >>> GPIO.setup(26, GPIO.IN)
+    >>> p.stop()
+    >>> p.start(75)
+    >>> p.stop()
+
+This will not work under rpi-lgpio:
+
+.. code-block:: pycon
+
+    >>> from RPi import GPIO
+    >>> GPIO.setmode(GPIO.BCM)
+    >>> GPIO.setup(26, GPIO.OUT)
+    >>> p = GPIO.PWM(26, 1000)
+    >>> p.start(75)
+    >>> GPIO.setup(26, GPIO.IN)
+    >>> p.stop()
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+      File "/home/dave/projects/rpi-lgpio/rpi-lgpio/RPi/GPIO.py", line 190, in stop
+        lgpio.tx_pwm(_chip, self._gpio, 0, 0)
+      File "/home/dave/envs/rpi-lgpio/lib/python3.10/site-packages/lgpio.py", line 1074, in tx_pwm
+        return _u2i(_lgpio._tx_pwm(
+      File "/home/dave/envs/rpi-lgpio/lib/python3.10/site-packages/lgpio.py", line 461, in _u2i
+        raise error(error_text(v))
+    lgpio.error: 'bad PWM micros'
+
+Though note that the error occurs when the :class:`PWM` object is *next* acted
+upon, rather than at the point when the GPIO is switched to an input.
+
+
+.. _RPi.GPIO: https://pypi.org/project/RPi.GPIO/
 .. _lgpio: https://abyz.me.uk/lg/py_lgpio.html

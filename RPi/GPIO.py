@@ -698,6 +698,12 @@ def add_event_detect(channel, edge, callback=None, bouncetime=None):
     when the specified *edge* is seen on the GPIO *channel*. The callable must
     accept a single parameter: the channel on which the edge was detected.
 
+    .. note::
+
+        Debounce works significantly differently in rpi-lgpio than it does
+        in rpi-gpio; please see :ref:`debounce` for more information on the
+        differences.
+
     :param int channel:
         The board pin number or BCM number depending on :func:`setmode` to
         watch for changes
