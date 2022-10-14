@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import os
 import sys
 import struct
 import warnings
@@ -401,12 +402,15 @@ def _get_rpi_info():
     about the board.
     """
     try:
-        with open('/proc/device-tree/system/linux,revision', 'rb') as f:
-            revision = struct.unpack('>I', f.read(4))[0]
-        if not revision:
-            raise OSError()
-    except OSError:
-        raise RuntimeError('This module can only be run on a Raspberry Pi!')
+        revision = int(os.environ['RPI_LGPIO_REVISION'], base=16)
+    except KeyError:
+        try:
+            with open('/proc/device-tree/system/linux,revision', 'rb') as f:
+                revision = struct.unpack('>I', f.read(4))[0]
+            if not revision:
+                raise OSError()
+        except OSError:
+            raise RuntimeError('This module can only be run on a Raspberry Pi!')
     if not (revision >> 23 & 0x1):
         raise NotImplementedError(
             'This module does not understand old-style revision codes')

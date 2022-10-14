@@ -115,3 +115,37 @@ Constants
 
     Used with :func:`wait_for_edge` and :func:`add_event_detect` to specify
     that all edges should be sampled
+
+.. data:: RPI_INFO
+
+    A dictionary that provides information about the model of Raspberry Pi that
+    the library is loaded onto. Includes the following keys:
+
+    P1_REVISION
+        The revision of the P1 header. 0 indicates no P1 header (typical on the
+        compute module range), 1 and 2 vary on the oldest Raspberry Pi models,
+        and 3 is the typical 40-pin header present on all modern Raspberry Pis.
+
+    REVISION
+        The hex `board revision code`_ as a :class:`str`.
+
+    TYPE
+        The name of the Pi model, e.g. "Pi 4 Model B"
+
+    MANUFACTURER
+        The name of the board manufacturer, e.g. "Sony UK"
+
+    PROCESSOR
+        The name of the SoC used on the board, e.g. "BCM2711"
+
+    RAM
+        The amount of RAM installed on the board, e.g. "4GB"
+
+    The board revision can be overridden with the ``RPI_LGPIO_REVISION``
+    environment variable; see :ref:`revision` for further details.
+
+.. data:: RPI_INFO
+
+    The same as the ``P1_REVISION`` key in :data:`RPI_REVISION`
+
+.. _board revision code: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#new-style-revision-codes
