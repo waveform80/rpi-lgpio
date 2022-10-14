@@ -168,25 +168,26 @@ allocate it:
 Debounce
 ========
 
-Debouncing of signals works fundamentally differently RPi.GPIO, and in `lgpio`_
-(the library underlying rpi-lgpio). Rather than attempt to add more complexity
-in between users and lgpio, which would also inevitably slow down edge
-detection (with all the attendant timing issues for certain applications) it is
-likely preferable to just live with this difference, but document it
+Debouncing of signals works fundamentally differently in RPi.GPIO, and in
+`lgpio`_ (the library underlying rpi-lgpio). Rather than attempt to add more
+complexity in between users and lgpio, which would also inevitably slow down
+edge detection (with all the attendant timing issues for certain applications)
+it is likely preferable to just live with this difference, but document it
 thoroughly.
 
-RPi.GPIO performs debounce by tracking the last timestamp at which it saw a
+RPi.GPIO debounces signals by tracking the last timestamp at which it saw a
 specified edge and suppressing reports of edges that occur within the specified
 number of milliseconds after that.
 
-lgpio (and thus rpi-lgpio) performs debounce by waiting for a signal to be
-stable for the specified number of milliseconds before reporting the edge.
+lgpio (and thus rpi-lgpio) debounces by waiting for a signal to be stable for
+the specified number of milliseconds before reporting the edge.
 
 For some applications, there will be little/no difference other than rpi-lgpio
 reporting an edge a few milliseconds later than RPi.GPIO would (specifically,
 by the amount of debounce requsted). The following diagram shows the waveform
-from a "bouncy" switch, along with the positions in time where RPi.GPIO and
-rpi-lgpio would report the rising edge when debounce of 3ms is requested:
+from a "bouncy" switch being pressed once, along with the positions in time
+where RPi.GPIO and rpi-lgpio would report the rising edge when debounce of 3ms
+is requested:
 
 .. code-block::
    :class: chart
@@ -256,7 +257,7 @@ all because none of them stay stable for 3ms.
 PWM on inputs
 =============
 
-RPi.GPIO permits (probably erroneously), PWM objects to continue operating on
+RPi.GPIO (probably erroneously) permits PWM objects to continue operating on
 pins that are switched to inputs:
 
 .. code-block:: pycon
