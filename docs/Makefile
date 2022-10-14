@@ -6,14 +6,14 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = ../build
-PY_SOURCES    := $(wildcard ../RPi/*.py)
+PY_SOURCES    := $(wildcard ../RPi/*.py ../RPi/*/*.py)
 DOT_DIAGRAMS  := $(wildcard images/*.dot)
 MSC_DIAGRAMS  := $(wildcard images/*.mscgen)
 GPI_DIAGRAMS  := $(wildcard images/*.gpi)
 SVG_IMAGES    := $(wildcard images/*.svg) $(DOT_DIAGRAMS:%.dot=%.svg) $(MSC_DIAGRAMS:%.mscgen=%.svg)
 PNG_IMAGES    := $(wildcard images/*.png) $(GPI_DIAGRAMS:%.gpi=%.png) $(SVG_IMAGES:%.svg=%.png)
 PDF_IMAGES    := $(SVG_IMAGES:%.svg=%.pdf) $(GPI_DIAGRAMS:%.gpi=%.pdf) $(DOT_DIAGRAMS:%.dot=%.pdf) $(MSC_DIAGRAMS:%.mscgen=%.pdf)
-INKSCAPE_VER  := $(shell inkscape --version | sed -ne '/^Inkscape/ s/^Inkscape \([0-9]\+\)\..*$$/\1/p')
+INKSCAPE_VER  := $(shell DISPLAY= inkscape --version | sed -ne '/^Inkscape/ s/^Inkscape \([0-9]\+\)\..*$$/\1/p')
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -134,16 +134,16 @@ images/types.dot: $(PY_SOURCES)
 
 ifeq ($(INKSCAPE_VER),0)
 %.png: %.svg
-	inkscape --export-dpi 150 -e $@ $<
+	DISPLAY= inkscape --export-dpi 150 -e $@ $<
 
 %.pdf: %.svg
-	inkscape -A $@ $<
+	DISPLAY= inkscape -A $@ $<
 else
 %.png: %.svg
-	inkscape --export-dpi 150 --export-type png -o $@ $<
+	DISPLAY= inkscape --export-dpi 150 --export-type png -o $@ $<
 
 %.pdf: %.svg
-	inkscape --export-type pdf -o $@ $<
+	DISPLAY= inkscape --export-type pdf -o $@ $<
 endif
 
 %.pdf: %.gpi
