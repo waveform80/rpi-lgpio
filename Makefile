@@ -78,7 +78,7 @@ develop:
 	$(PIP) install -U pip
 	$(PIP) install -U twine
 	$(PIP) install -U tox
-	$(PIP) install -e .[doc,test,yaml]
+	$(PIP) install -e .[doc,test]
 
 test:
 	$(PYTEST)
