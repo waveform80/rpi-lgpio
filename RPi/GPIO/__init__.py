@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import sys
+import struct
 import warnings
 from time import sleep
 from threading import Event
@@ -18,6 +19,10 @@ except AttributeError:
     lgpio.SET_PULL_NONE = lgpio.SET_BIAS_DISABLE
     lgpio.SET_PULL_UP = lgpio.SET_BIAS_PULL_UP
     lgpio.SET_PULL_DOWN = lgpio.SET_BIAS_PULL_DOWN
+
+# This is *not* the version of rpi-lgpio, but is the version of RPi.GPIO we
+# seek to emulate
+VERSION = '0.7.2'
 
 UNKNOWN = -1
 BOARD = 10
@@ -40,6 +45,7 @@ SERIAL = 40
 SPI = 41
 I2C = 42
 HARD_PWM = 43
+
 
 # Note the nuance of the early boards (in which GPIO0/1 and GPIO2/3 were
 # switched) is not represented here. This library (currently) has no intention
@@ -386,6 +392,77 @@ def _in_use(gpio):
     GPIO.
     """
     return bool(_check(lgpio.gpio_get_mode(_chip, gpio)) & _LG_MODES)
+
+
+def _get_rpi_info():
+    """
+    Queries the device-tree for the board revision, throwing :exc:`RuntimeError`
+    if it cannot be found, then returns a :class:`dict` containing information
+    about the board.
+    """
+    try:
+        with open('/proc/device-tree/system/linux,revision', 'rb') as f:
+            revision = struct.unpack('>I', f.read(4))[0]
+        if not revision:
+            raise OSError()
+    except OSError:
+        raise RuntimeError('This module can only be run on a Raspberry Pi!')
+    if not (revision >> 23 & 0x1):
+        raise NotImplementedError(
+            'This module does not understand old-style revision codes')
+    return {
+        'P1_REVISION': {
+            0x00: 2,
+            0x01: 2,
+            0x06: 0,
+            0x0a: 0,
+            0x10: 0,
+            0x14: 0,
+        }.get(revision >> 4 & 0xff, 3),
+        'REVISION': hex(revision)[2:],
+        'TYPE': {
+            0x00: 'Model A',
+            0x01: 'Model B',
+            0x02: 'Model A+',
+            0x03: 'Model B+',
+            0x04: 'Pi 2 Model B',
+            0x05: 'Alpha',
+            0x06: 'Compute Module 1',
+            0x08: 'Pi 3 Model B',
+            0x09: 'Zero',
+            0x0a: 'Compute Module 3',
+            0x0c: 'Zero W',
+            0x0d: 'Pi 3 Model B+',
+            0x0e: 'Pi 3 Model A+',
+            0x10: 'Compute Module 3+',
+            0x11: 'Pi 4 Model B',
+            0x12: 'Zero 2 W',
+            0x13: 'Pi 400',
+            0x14: 'Compute Module 4',
+        }.get(revision >> 4 & 0xff, 'Unknown'),
+        'MANUFACTURER': {
+            0: 'Sony UK',
+            1: 'Egoman',
+            2: 'Embest',
+            3: 'Sony Japan',
+            4: 'Embest',
+            5: 'Stadium',
+        }.get(revision >> 16 & 0xf, 'Unknown'),
+        'PROCESSOR': {
+            0: 'BCM2835',
+            1: 'BCM2836',
+            2: 'BCM2837',
+            3: 'BCM2711',
+        }.get(revision >> 12 & 0xf, 'Unknown'),
+        'RAM': {
+            0: '256M',
+            1: '512M',
+            2: '1GB',
+            3: '2GB',
+            4: '4GB',
+            5: '8GB',
+        }.get(revision >> 20 & 0x7, 'Unknown'),
+    }
 
 
 def getmode():
@@ -791,3 +868,7 @@ def event_detected(channel):
         return _alerts[_to_gpio(channel)].detected
     except KeyError:
         return False
+
+
+RPI_INFO = _get_rpi_info()
+RPI_REVISION = RPI_INFO['P1_REVISION']
