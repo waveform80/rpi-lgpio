@@ -51,6 +51,8 @@ pygments_style = 'sphinx'
 autodoc_member_order = 'groupwise'
 autodoc_default_options = {'members': True}
 autodoc_mock_imports = ['lgpio']
+# Set a fake revision so docs can import RPi.GPIO on non-Pi platforms
+os.environ['RPI_LGPIO_REVISION'] = 'd03114'
 
 # -- Intersphinx options -----------------------------------------------------
 
