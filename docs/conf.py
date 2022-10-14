@@ -49,21 +49,13 @@ pygments_style = 'sphinx'
 # -- Autodoc options ---------------------------------------------------------
 
 autodoc_member_order = 'groupwise'
-autodoc_default_options = {
-    'members': True,
-}
-autodoc_mock_imports = [
-    'lxml',
-    'chardet',
-    'blessings',
-    'tqdm',
-    'dateutil',
-]
+autodoc_default_options = {'members': True}
+autodoc_mock_imports = ['lgpio']
 
 # -- Intersphinx options -----------------------------------------------------
 
 intersphinx_mapping = {
-    'python': ('http://docs.python.org/3.10', None),
+    'python': ('http://docs.python.org/3/', None),
 }
 
 # -- Options for HTML output ----------------------------------------------
