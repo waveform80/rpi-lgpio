@@ -18,8 +18,8 @@ differences in behaviour that may result in incompatibility.
 Bug Compatible?
 ===============
 
-What does being "bug compatible" mean? Simply put it means it is not enough for
-the library to implement the `RPi.GPIO`_ API. It must also:
+What does being "bug compatible" mean? It is not enough for the library to
+implement the `RPi.GPIO`_ API. It must also:
 
 * Act, as far as possible, in the same way to the same calls with the same
   values
@@ -74,6 +74,35 @@ specified via the environment in the ``RPI_LGPIO_REVISION`` value. For example:
 
 .. _revision code: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#new-style-revision-codes
 
+
+Alternate Pin Modes
+===================
+
+The :func:`gpio_function` function can be used to report the current mode of a
+pin. In RPi.GPIO this may return several "alternate" mode values including
+:data:`SPI`, :data:`I2C`, and :data:`HARD_PWM`. rpi-lgpio will only ever return
+the basic :data:`IN` and :data:`OUT` values however, as the underlying gpiochip
+device cannot report alternate modes.
+
+For example, under RPi.GPIO:
+
+.. code-block:: pycon
+
+    >>> from RPi import GPIO
+    >>> GPIO.setmode(GPIO.BCM)
+    >>> GPIO.gpio_function(2) == GPIO.I2C
+    True
+
+Under rpi-lgpio:
+
+.. code-block:: pycon
+
+    >>> from RPi import GPIO
+    >>> GPIO.setmode(GPIO.BCM)
+    >>> GPIO.gpio_function(2) == GPIO.I2C
+    False
+    >>> GPIO.gpio_function(2) == GPIO.IN
+    True
 
 Stack Traces
 ============

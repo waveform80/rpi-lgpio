@@ -519,8 +519,9 @@ def setwarnings(value):
 
 def gpio_function(channel):
     """
-    Return the current GPIO function (:data:`IN`, :data:`OUT`, :data:`PWM`,
-    :data:`SERIAL`, :data:`I2C`, :data:`SPI`) for the specified *channel*.
+    Return the current GPIO function (:data:`IN`, :data:`OUT`,
+    :data:`HARD_PWM`, :data:`SERIAL`, :data:`I2C`, :data:`SPI`) for the
+    specified *channel*.
 
     .. note::
 
