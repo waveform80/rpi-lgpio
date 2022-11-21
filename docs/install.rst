@@ -44,14 +44,14 @@ can also install using pip:
 
 .. code-block:: console
 
-    $ pip remove rpi-gpio
+    $ pip uninstall rpi-gpio
     $ pip install rpi-lgpio
 
 On some platforms you may need to use a Python 3 specific alias of pip:
 
 .. code-block:: console
 
-    $ pip3 remove rpi-gpio
+    $ pip3 uninstall rpi-gpio
     $ pip3 install rpi-lgpio
 
 The instructions above assume that rpi-gpio is already installed by pip as
