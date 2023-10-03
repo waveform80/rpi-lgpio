@@ -15,6 +15,8 @@ Release 0.4 (2023-10-03)
 * Add compatibility with Raspberry Pi 5 (auto-selection of correct gpiochip
   device)
 * Add ability to override gpiochip selection; see :ref:`gpio_chip`
+* Convert bouncetime -666 to :data:`None` (bug compatibility, which also
+  ensures this should work with GPIO Zero's rpigpio pin driver)
 
 
 Release 0.3 (2022-10-14)

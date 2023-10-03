@@ -265,8 +265,14 @@ def _check_bounce(bouncetime):
     """
     Checks *bouncetime* is :data:`None` or a positive value.
     """
+    # The value -666 is special in RPi.GPIO, and is used internally as the
+    # default of no bouncetime; we convert this to None (which is lgpio's
+    # Python binding's default)
+    if bouncetime == -666:
+        bouncetime = None
     if bouncetime is not None and bouncetime <= 0:
         raise ValueError('Bouncetime must be greater than 0')
+    return bouncetime
 
 
 def _get_alert(gpio, mode, edge, bouncetime):
@@ -749,7 +755,7 @@ def wait_for_edge(channel, edge, bouncetime=None, timeout=None):
     mode = _check(lgpio.gpio_get_mode(_chip, gpio))
     _check_input(mode)
     _check_edge(edge)
-    _check_bounce(bouncetime)
+    bouncetime = _check_bounce(bouncetime)
     if timeout is not None and timeout <= 0:
         raise ValueError('Timeout must be greater than 0')
 
@@ -814,7 +820,7 @@ def add_event_detect(channel, edge, callback=None, bouncetime=None):
     mode = _check(lgpio.gpio_get_mode(_chip, gpio))
     _check_input(mode)
     _check_edge(edge)
-    _check_bounce(bouncetime)
+    bouncetime = _check_bounce(bouncetime)
     try:
         alert = _get_alert(gpio, mode, edge, bouncetime)
     except KeyError:
