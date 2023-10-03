@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Dave Jones <dave@waveform.org.uk>
+# Copyright (c) 2022-2023 Dave Jones <dave@waveform.org.uk>
 #
 # SPDX-License-Identifier: MIT
 

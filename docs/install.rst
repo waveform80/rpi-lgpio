@@ -1,3 +1,4 @@
+.. Copyright (c) 2022 David Vescovi <dvescovi@tampabay.rr.com>
 .. Copyright (c) 2022 Dave Jones <dave@waveform.org.uk>
 ..
 .. SPDX-License-Identifier: MIT
