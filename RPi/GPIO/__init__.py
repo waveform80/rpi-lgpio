@@ -597,7 +597,7 @@ def cleanup(chanlist=None):
         assert not _alerts
 
 
-def setup(chanlist, direction, pull_up_down=None, initial=None):
+def setup(chanlist, direction, pull_up_down=PUD_OFF, initial=None):
     """
     Set up a GPIO channel or iterable of channels with a direction and
     (optionally, for inputs) pull/up down control, or (optionally, for outputs)
@@ -630,16 +630,14 @@ def setup(chanlist, direction, pull_up_down=None, initial=None):
         The initial state of an output
     """
     if direction == OUT:
-        if pull_up_down is not None:
+        if pull_up_down != PUD_OFF:
             raise ValueError('pull_up_down parameter is not valid for outputs')
         if initial is not None:
             initial = bool(initial)
     elif direction == IN:
         if initial is not None:
             raise ValueError('initial parameter is not valid for inputs')
-        if pull_up_down is None:
-            pull_up_down = PUD_OFF
-        elif pull_up_down not in (PUD_UP, PUD_DOWN, PUD_OFF):
+        if pull_up_down not in (PUD_UP, PUD_DOWN, PUD_OFF):
             raise ValueError(
                 'Invalid value for pull_up_down - should be either PUD_OFF, '
                 'PUD_UP or PUD_DOWN')
