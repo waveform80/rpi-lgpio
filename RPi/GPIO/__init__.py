@@ -443,6 +443,7 @@ def _get_rpi_info():
             0x12: 'Zero 2 W',
             0x13: 'Pi 400',
             0x14: 'Compute Module 4',
+            0x17: 'Pi 5 Model B',
         }.get(revision >> 4 & 0xff, 'Unknown'),
         'MANUFACTURER': {
             0: 'Sony UK',
@@ -457,6 +458,7 @@ def _get_rpi_info():
             1: 'BCM2836',
             2: 'BCM2837',
             3: 'BCM2711',
+            4: 'BCM2712',
         }.get(revision >> 12 & 0xf, 'Unknown'),
         'RAM': {
             0: '256M',
@@ -465,6 +467,7 @@ def _get_rpi_info():
             3: '2GB',
             4: '4GB',
             5: '8GB',
+            6: '16GB',
         }.get(revision >> 20 & 0x7, 'Unknown'),
     }
 
@@ -504,7 +507,10 @@ def setmode(new_mode):
         raise ValueError('An invalid mode was passed to setmode()')
 
     if _chip is None:
-        _chip = _check(lgpio.gpiochip_open(0))
+        chip_num = os.environ.get('RPI_LGPIO_CHIP')
+        if chip_num is None:
+            chip_num = 4 if _get_rpi_info()['PROCESSOR'] == 'BCM2712' else 0
+        _chip = _check(lgpio.gpiochip_open(int(chip_num)))
     _mode = new_mode
 
 

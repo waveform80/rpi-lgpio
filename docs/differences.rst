@@ -75,6 +75,50 @@ specified via the environment in the ``RPI_LGPIO_REVISION`` value. For example:
 .. _revision code: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#new-style-revision-codes
 
 
+.. _gpio_chip:
+
+GPIO Chip
+=========
+
+The lgpio library needs to know the number of the ``/dev/gpiochip`` device it
+should open. By default this will be calculated from the reported :ref:`Pi
+Revision` (which may be customized as detailed in that section). In practice
+this means the chip defaults to "4" on the Raspberry Pi Model 5B, and "0" on
+all other boards.
+
+You may also specify the chip manually using the ``RPI_LGPIO_CHIP`` environment
+variable. For example:
+
+.. code-block:: console
+
+    $ ls /dev/gpiochip*
+    crw-------  1 root root    254, 0 Oct  1 15:00 /dev/gpiochip0
+    crw-------  1 root root    254, 1 Oct  1 15:00 /dev/gpiochip1
+    crw-------  1 root root    254, 2 Oct  1 15:00 /dev/gpiochip2
+    crw-------  1 root root    254, 3 Oct  1 15:00 /dev/gpiochip3
+    crw-rw----+ 1 root dialout 254, 4 Oct  1 15:00 /dev/gpiochip4
+    crw-------  1 root root    254, 5 Oct  1 15:00 /dev/gpiochip5
+    $ RPI_LGPIO_CHIP=5 python3
+    Python 3.11.5 (main, Aug 29 2023, 15:31:31) [GCC 13.2.0] on linux
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> from RPi import GPIO
+    >>> GPIO.setmode(GPIO.BCM)
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+      File "/usr/lib/python3/dist-packages/RPi/GPIO/__init__.py", line 513, in setmode
+        _chip = _check(lgpio.gpiochip_open(int(chip_num)))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/usr/lib/python3/dist-packages/lgpio.py", line 645, in gpiochip_open
+        return _u2i(handle)
+               ^^^^^^^^^^^^
+      File "/usr/lib/python3/dist-packages/lgpio.py", line 458, in _u2i
+        raise error(error_text(v))
+    lgpio.error: 'can not open gpiochip'
+
+This is primarily useful for other boards where the correct gpiochip device is
+something other than 0.
+
+
 Alternate Pin Modes
 ===================
 
@@ -103,6 +147,7 @@ Under rpi-lgpio:
     False
     >>> GPIO.gpio_function(2) == GPIO.IN
     True
+
 
 Stack Traces
 ============
