@@ -18,6 +18,7 @@ Release 0.4 (2023-10-03)
 * Convert bouncetime -666 to :data:`None` (bug compatibility, which also
   ensures this should work with GPIO Zero's rpigpio pin driver)
 * Fix ``pull_up_down`` default on :func:`setup`
+* Fix changing ``pull_up_down`` of already-acquired input
 
 
 Release 0.3 (2022-10-14)

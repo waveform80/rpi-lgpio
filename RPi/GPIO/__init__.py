@@ -654,6 +654,12 @@ def setup(chanlist, direction, pull_up_down=PUD_OFF, initial=None):
             warnings.warn(Warning(
                 'A physical pull up resistor is fitted on this channel!'))
         if direction == IN:
+            # This gpio_free may seem redundant, but is required when changing
+            # the line-flags of an already acquired input line
+            try:
+                lgpio.gpio_free(_chip, gpio)
+            except lgpio.error:
+                pass
             _check(lgpio.gpio_claim_input(_chip, gpio, {
                 PUD_OFF:  lgpio.SET_PULL_NONE,
                 PUD_DOWN: lgpio.SET_PULL_DOWN,
