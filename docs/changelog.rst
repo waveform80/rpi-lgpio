@@ -9,6 +9,14 @@ Changelog
 .. currentmodule:: RPi.GPIO
 
 
+Release 0.4 (2023-10-03)
+========================
+
+* Add compatibility with Raspberry Pi 5 (auto-selection of correct gpiochip
+  device)
+* Add ability to override gpiochip selection; see :ref:`gpio_chip`
+
+
 Release 0.3 (2022-10-14)
 ========================
 
