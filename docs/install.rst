@@ -41,7 +41,7 @@ wheel package
 =============
 
 If your distribution does not include a "native" packaging of rpi-lgpio, you
-can also install using pip:
+can also install using pip (preferably in a Python virtual environment):
 
 .. code-block:: console
 
@@ -66,4 +66,10 @@ rpi-lgpio. In this case you may need to remove rpi-gpio from apt first:
     $ pip3 install rpi-lgpio
 
 If you wish to install system-wide with pip, you may need to place ``sudo`` in
-front of the ``pip`` (or ``pip3``) commands too.
+front of the ``pip`` (or ``pip3``) commands too. Please be aware that on modern
+versions of pip you will need to explicitly accept the risk of trying to
+co-exist ``apt`` and ``pip`` packages as follows:
+
+.. code-block:: console
+
+    $ sudo pip3 install --break-system-packages rpi-lgpio
