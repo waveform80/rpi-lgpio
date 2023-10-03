@@ -19,6 +19,7 @@ Release 0.4 (2023-10-03)
   ensures this should work with GPIO Zero's rpigpio pin driver)
 * Fix ``pull_up_down`` default on :func:`setup`
 * Fix changing ``pull_up_down`` of already-acquired input
+* Ensure :meth:`PWM.stop` is idempotent
 
 
 Release 0.3 (2022-10-14)
