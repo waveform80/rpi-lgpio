@@ -81,10 +81,10 @@ GPIO Chip
 =========
 
 The lgpio library needs to know the number of the ``/dev/gpiochip`` device it
-should open. By default this will be calculated from the reported :ref:`Pi
-Revision` (which may be customized as detailed in that section). In practice
-this means the chip defaults to "4" on the Raspberry Pi Model 5B, and "0" on
-all other boards.
+should open. By default this will be calculated from the reported
+:ref:`revision` (which may be customized as detailed in that section). In
+practice this means the chip defaults to "4" on the Raspberry Pi Model 5B, and
+"0" on all other boards.
 
 You may also specify the chip manually using the ``RPI_LGPIO_CHIP`` environment
 variable. For example:
