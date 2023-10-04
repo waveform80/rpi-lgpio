@@ -41,11 +41,15 @@ wheel package
 =============
 
 If your distribution does not include a "native" packaging of rpi-lgpio, you
-can also install using pip (preferably in a Python virtual environment):
+can also install `rpi-lgpio from PyPI <https://pypi.org/project/rpi-lgpio/>`_
+using pip (preferably in a Python virtual environment). Please note that
+rpi-lgpio does still depend on lgpio so you will need that installed as a
+dependency:
 
 .. code-block:: console
 
     $ pip uninstall rpi-gpio
+    $ sudo apt install python3-lgpio
     $ pip install rpi-lgpio
 
 On some platforms you may need to use a Python 3 specific alias of pip:
@@ -53,6 +57,7 @@ On some platforms you may need to use a Python 3 specific alias of pip:
 .. code-block:: console
 
     $ pip3 uninstall rpi-gpio
+    $ sudo apt install python3-lgpio
     $ pip3 install rpi-lgpio
 
 The instructions above assume that rpi-gpio is already installed by pip as
@@ -63,6 +68,7 @@ rpi-lgpio. In this case you may need to remove rpi-gpio from apt first:
 .. code-block:: console
 
     $ sudo apt remove python3-rpi.gpio
+    $ sudo apt install python3-lgpio
     $ pip3 install rpi-lgpio
 
 If you wish to install system-wide with pip, you may need to place ``sudo`` in
