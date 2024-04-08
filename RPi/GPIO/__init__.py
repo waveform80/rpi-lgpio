@@ -656,7 +656,7 @@ def setup(chanlist, direction, pull_up_down=PUD_OFF, initial=None):
         # shortly anyway. We do deal with the pull-up warning, but only for
         # GPIO2 and GPIO3 because we're not supporting the original RPi so we
         # don't need to worry about the GPIO0 and GPIO1 discrepancy
-        if _warnings and gpio in (2, 3) and pull in (PUD_UP, PUD_DOWN):
+        if _warnings and gpio in (2, 3) and pull_up_down in (PUD_UP, PUD_DOWN):
             warnings.warn(Warning(
                 'A physical pull up resistor is fitted on this channel!'))
         if direction == IN:
