@@ -14,6 +14,15 @@ interface`_).
     packages attempt to install a module named ``RPi.GPIO`` and obviously this
     will not work.
 
+Useful Links
+============
+
+* [Source code](https://github.com/waveform80/rpi-lgpio)
+* [Bug reports](https://github.com/waveform80/rpi-lgpio/issues)
+* [Documentation](https://rpi-lgpio.readthedocs.io/)
+.. * [Debian packaging](https://salsa.debian.org/python-team/packages/rpi-lgpio)
+* [Ubuntu packaging](https://launchpad.net/ubuntu/+source/rpi-lgpio)
+
 .. _rpi-gpio: https://pypi.org/project/RPi.GPIO/
 .. _gpiochip device: https://embeddedbits.org/new-linux-kernel-gpio-user-space-interface/
 .. _deprecated sysfs GPIO interface: https://waldorf.waveform.org.uk/2021/the-pins-they-are-a-changin.html
