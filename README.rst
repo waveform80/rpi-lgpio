@@ -18,10 +18,14 @@ Useful Links
 ============
 
 * `Source code <https://github.com/waveform80/rpi-lgpio>`_
+
 * `Bug reports <https://github.com/waveform80/rpi-lgpio/issues>`_
+
 * `Documentation <https://rpi-lgpio.readthedocs.io/>`_
-.. * `Debian packaging <https://salsa.debian.org/python-team/packages/rpi-lgpio>`_
+
 * `Ubuntu packaging <https://launchpad.net/ubuntu/+source/rpi-lgpio>`_
+
+.. * `Debian packaging <https://salsa.debian.org/python-team/packages/rpi-lgpio>`_
 
 .. _rpi-gpio: https://pypi.org/project/RPi.GPIO/
 .. _gpiochip device: https://embeddedbits.org/new-linux-kernel-gpio-user-space-interface/
