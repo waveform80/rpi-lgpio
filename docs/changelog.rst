@@ -9,6 +9,16 @@ Changelog
 .. currentmodule:: RPi.GPIO
 
 
+Release 0.5 (2024-04-12)
+========================
+
+* Fix setting pull on GPIO2 & 3 (`#8`_)
+* Added some bits to the Differences chapter on determining which GPIOs are
+  reserved
+
+.. _#8: https://github.com/waveform80/rpi-lgpio/pull/8
+
+
 Release 0.4 (2023-10-03)
 ========================
 
