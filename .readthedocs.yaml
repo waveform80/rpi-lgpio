@@ -12,7 +12,6 @@ python:
 build:
   os: ubuntu-22.04
   apt_packages:
-    - swig
-    - liblgpio1
+    - python3-lgpio
   tools:
     python: "3"
