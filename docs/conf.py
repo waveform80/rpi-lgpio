@@ -67,7 +67,7 @@ pygments_style = 'default'
 html_title = '{project} {version} Documentation'.format(
     project=project, version=version)
 html_static_path = ['_static']
-manpages_url = 'https://manpages.ubuntu.com/manpages/jammy/en/man{section}/{page}.{section}.html'
+manpages_url = 'https://manpages.ubuntu.com/manpages/noble/en/man{section}/{page}.{section}.html'
 
 # Hack to make wide tables work properly in RTD
 # See https://github.com/snide/sphinx_rtd_theme/issues/117 for details
