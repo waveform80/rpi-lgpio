@@ -11,5 +11,7 @@ python:
 
 build:
   os: ubuntu-22.04
+  apt_packages:
+    - swig
   tools:
     python: "3"
