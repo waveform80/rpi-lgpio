@@ -43,19 +43,20 @@ this will not always be possible...
 Pi Revision
 ===========
 
-The RPi.GPIO module attempts to determine the model and revision of Raspberry
-Pi board that it is running on when the module is imported, raising
-:exc:`RuntimeError` at import time if it finds it is not running on a Raspberry
-Pi. rpi-lgpio emulates this behaviour, but this can be inconvenient for certain
-situations including testing, but also usage of rpi-lgpio on other single board
-computers.
+The RPi.GPIO module attempts to determine the revision of Raspberry Pi board
+that it is running on when the module is imported by querying
+:file:`/proc/cpuinfo`, raising :exc:`RuntimeError` at import time if it finds
+it is not running on a Raspberry Pi. rpi-lgpio emulates this behaviour, but
+this can be inconvenient for certain situations including testing, and usage of
+rpi-lgpio on other single board computers.
 
 To that end rpi-lgpio permits a Raspberry Pi `revision code`_ to be manually
-specified via the environment in the ``RPI_LGPIO_REVISION`` value. For example:
+specified via the environment in the ``RPI_LGPIO_REVISION`` value (when this is
+set, :file:`/proc/cpuinfo` is not read at all). For example:
 
 .. code-block:: console
 
-    $ RPI_LGPIO_REVISION='c03114' python3
+    $ RPI_LGPIO_REVISION="c03114" python3
     Python 3.10.6 (main, Aug 10 2022, 11:40:04) [GCC 11.3.0] on linux
     Type "help", "copyright", "credits" or "license" for more information.
     >>> from RPi import GPIO
@@ -63,7 +64,7 @@ specified via the environment in the ``RPI_LGPIO_REVISION`` value. For example:
     {'P1_REVISION': 3, 'REVISION': 'c03114', 'TYPE': 'Pi 4 Model B',
     'MANUFACTURER': 'Sony UK', 'PROCESSOR': 'BCM2711', 'RAM': '4GB'}
     >>> exit()
-    $ RPI_LGPIO_REVISION='902120' python3
+    $ RPI_LGPIO_REVISION="902120" python3
     Python 3.10.6 (main, Aug 10 2022, 11:40:04) [GCC 11.3.0] on linux
     Type "help", "copyright", "credits" or "license" for more information.
     >>> from RPi import GPIO
@@ -72,7 +73,58 @@ specified via the environment in the ``RPI_LGPIO_REVISION`` value. For example:
     'MANUFACTURER': 'Sony UK', 'PROCESSOR': 'BCM2837', 'RAM': '512M'}
     >>> exit()
 
+At present, rpi-lgpio only interprets "`new-style`_" (6 hex-digit) revision
+codes, as found in the "Revision" field of :file:`/proc/cpuinfo`. The
+`old-style`_ (4 hex-digit) revision codes found on the original model B, A, A+,
+B+, and Compute Module 1 are not supported. If there is significant demand,
+this can be added but for the time being only boards made since the launch of
+the 2B (which introduced the new-style revision codes) are supported.
+Specifically, this includes the following models:
+
+* Zero
+
+* Zero W
+
+* Zero 2W
+
+* 2B
+
+* 3B
+
+* Compute Module 3
+
+* 3A+
+
+* 3B+
+
+* Compute Module 3+
+
+* 4B
+
+* 400
+
+* Compute Module 4
+
+* 5B
+
+A workaround for use on old-style boards is to use ``RPI_LGPIO_REVISION`` to
+fake the revision code. For example, 0004 (an old-style model B rev 2) can also
+be represented by 800012 in the new-style.
+
+.. code-block:: console
+
+    $ RPI_LGPIO_REVISION="800012" python3
+    Python 3.12.2 (main, Apr  2 2024, 18:40:52) [GCC 13.2.0] on linux
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> from RPi import GPIO
+    >>> GPIO.RPI_INFO
+    {'P1_REVISION': 2, 'REVISION': '800012', 'TYPE': 'Model B',
+    'MANUFACTURER': 'Sony UK', 'PROCESSOR': 'BCM2835', 'RAM': '256M'}
+    >>> exit()
+
 .. _revision code: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#new-style-revision-codes
+.. _new-style: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#new-style-revision-codes
+.. _old-style: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#old-style-revision-codes
 
 
 .. _gpio_chip:
