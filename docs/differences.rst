@@ -207,6 +207,108 @@ allocate it:
         raise error(error_text(v))
     lgpio.error: 'GPIO not allocated'
 
+How can you tell if a GPIO is reserved by another process? Use the
+:manpage:`gpioinfo(1)` tool, which is part of the ``gpiod`` package. By default
+this attempts to read GPIO chip 0, which is fine all Pi's *except* the Pi 5
+where you will need to read GPIO chip 4 specifically:
+
+.. code-block:: console
+
+    $ gpioinfo 4
+    gpiochip4 - 54 lines:
+        line   0:     "ID_SDA"       unused   input  active-high
+        line   1:     "ID_SCL"       unused   input  active-high
+        line   2:      "GPIO2"       unused   input  active-high
+        line   3:      "GPIO3"       unused   input  active-high
+        line   4:      "GPIO4"       unused   input  active-high
+        line   5:      "GPIO5"       unused   input  active-high
+        line   6:      "GPIO6"       unused   input  active-high
+        line   7:      "GPIO7"   "spi0 CS1"  output   active-low [used]
+        line   8:      "GPIO8"   "spi0 CS0"  output   active-low [used]
+        line   9:      "GPIO9"       unused   input  active-high
+        line  10:     "GPIO10"       unused   input  active-high
+        line  11:     "GPIO11"       unused   input  active-high
+        line  12:     "GPIO12"       unused   input  active-high
+        line  13:     "GPIO13"       unused   input  active-high
+        line  14:     "GPIO14"       unused   input  active-high
+        line  15:     "GPIO15"       unused   input  active-high
+        line  16:     "GPIO16"       unused   input  active-high
+        line  17:     "GPIO17"       unused   input  active-high
+        line  18:     "GPIO18"       unused   input  active-high
+        line  19:     "GPIO19"       unused   input  active-high
+        line  20:     "GPIO20"       unused   input  active-high
+        line  21:     "GPIO21"       unused   input  active-high
+        line  22:     "GPIO22"       unused   input  active-high
+        line  23:     "GPIO23"       unused   input  active-high
+        line  24:     "GPIO24"       unused   input  active-high
+        line  25:     "GPIO25"       unused   input  active-high
+        line  26:     "GPIO26"       unused   input  active-high
+        line  27:     "GPIO27"       unused   input  active-high
+        line  28: "PCIE_RP1_WAKE" unused output active-high
+        line  29:   "FAN_TACH"       unused   input  active-high
+        line  30:   "HOST_SDA"       unused   input  active-high
+        line  31:   "HOST_SCL"       unused   input  active-high
+        line  32:  "ETH_RST_N"  "phy-reset"  output   active-low [used]
+        line  33:          "-"       unused   input  active-high
+        line  34: "CD0_IO0_MICCLK" "cam0_reg" output active-high [used]
+        line  35: "CD0_IO0_MICDAT0" unused input active-high
+        line  36: "RP1_PCIE_CLKREQ_N" unused input active-high
+        line  37:          "-"       unused   input  active-high
+        line  38:    "CD0_SDA"       unused   input  active-high
+        line  39:    "CD0_SCL"       unused   input  active-high
+        line  40:    "CD1_SDA"       unused   input  active-high
+        line  41:    "CD1_SCL"       unused   input  active-high
+        line  42: "USB_VBUS_EN" unused output active-high
+        line  43:   "USB_OC_N"       unused   input  active-high
+        line  44: "RP1_STAT_LED" "PWR" output active-low [used]
+        line  45:    "FAN_PWM"       unused  output  active-high
+        line  46: "CD1_IO0_MICCLK" "cam1_reg" output active-high [used]
+        line  47:  "2712_WAKE"       unused   input  active-high
+        line  48: "CD1_IO1_MICDAT1" unused input active-high
+        line  49: "EN_MAX_USB_CUR" unused output active-high
+        line  50:          "-"       unused   input  active-high
+        line  51:          "-"       unused   input  active-high
+        line  52:          "-"       unused   input  active-high
+        line  53:          "-"       unused   input  active-high
+
+The ``[used]`` suffixes indicate which GPIOs are reserved by other processes.
+In the output above we can see that GPIOs 7 and 8 are reserved. As it happens,
+these are reserved by the kernel because we have ``dtparam=spi=on`` in our boot
+configuration to enable the kernel SPI devices (:file:`/dev/spidev0.0` and
+:file:`/dev/spidev0.1`). As a result, these GPIOs *cannot* be used by rpi-lgpio
+because the kernel will not let anything else reserve them. They can only be
+used for SPI via those kernel devices, and the only way to release those GPIOs
+would be to change our kernel / boot configuration.
+
+In other cases we may find that a GPIO is temporarily reserved by a process.
+For example, the following trivial script will reserve GPIO21.
+
+.. code-block:: python3
+
+    from time import sleep
+    from RPi import GPIO
+
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(21, GPIO.OUT)
+    while True:
+        sleep(1)
+
+If we again query :manpage:`gpioinfo(1)` while it is running we will see the
+following:
+
+.. code-block:: console
+
+    $ gpioinfo 4 | grep GPIO21
+            line  21:     "GPIO21"         "lg"  output  active-high [used bias-disabled]
+
+However, this reservation will disappear when the process dies.
+
+.. note::
+
+    If you receive the ``GPIO not allocated`` error in your script, please
+    check the output of :manpage:`gpioinfo(1)` to see if the GPIO you want to
+    use is reserved by something else.
+
 
 .. _debounce:
 
@@ -230,9 +332,9 @@ the specified number of milliseconds before reporting the edge.
 For some applications, there will be little/no difference other than rpi-lgpio
 reporting an edge a few milliseconds later than RPi.GPIO would (specifically,
 by the amount of debounce requsted). The following diagram shows the waveform
-from a "bouncy" switch being pressed once, along with the positions in time
-where RPi.GPIO and rpi-lgpio would report the rising edge when debounce of 3ms
-is requested:
+from a "bouncy" switch being pressed once, along with the points in time where
+RPi.GPIO and rpi-lgpio would report the rising edge when debounce of 3ms is
+requested:
 
 .. code-block::
    :class: chart
@@ -268,14 +370,16 @@ However, consider this same scenario if debounce of 2ms is requested:
        RPi.GPIO  RPi.GPIO  rpi-lgpio
 
 In this case, RPi.GPIO reports the switch *twice* because the third edge is
-still 2ms after the first edge. However, rpi-lgpio only reports the switch
+at least 2ms after the first edge. However, rpi-lgpio only reports the switch
 *once* because only one edge stayed stable for 2ms. Also note in this case,
 that rpi-lgpio's report time has moved back to 6ms because it's not waiting as
 long for stability.
 
-This implies that you may find shorter debounce periods preferable when working
-with rpi-lgpio, than with RPi.GPIO. They will still debounce effectively, but
-will reduce the delay in reporting edges.
+.. note::
+
+    This implies that you may find shorter debounce periods preferable when
+    working with rpi-lgpio, than with RPi.GPIO. They will still debounce
+    effectively, but will reduce the delay in reporting edges.
 
 One final scenario to consider is a waveform of equally spaced, repeating
 pulses (like PWM) every 2ms:
