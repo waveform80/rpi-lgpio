@@ -15,7 +15,9 @@ Release 0.5 (2024-04-12)
 * Fix setting pull on GPIO2 & 3 (`#8`_)
 * Added some bits to the Differences chapter on determining which GPIOs are
   reserved
+* Added more information on the supported models of Raspberry Pi (`#6`_)
 
+.. _#8: https://github.com/waveform80/rpi-lgpio/issues/6
 .. _#8: https://github.com/waveform80/rpi-lgpio/pull/8
 
 
