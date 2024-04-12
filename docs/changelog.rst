@@ -17,7 +17,7 @@ Release 0.5 (2024-04-12)
   reserved
 * Added more information on the supported models of Raspberry Pi (`#6`_)
 
-.. _#8: https://github.com/waveform80/rpi-lgpio/issues/6
+.. _#6: https://github.com/waveform80/rpi-lgpio/issues/6
 .. _#8: https://github.com/waveform80/rpi-lgpio/pull/8
 
 
