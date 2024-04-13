@@ -261,7 +261,7 @@ allocate it:
 
 How can you tell if a GPIO is reserved by another process? Use the
 :manpage:`gpioinfo(1)` tool, which is part of the ``gpiod`` package. By default
-this attempts to read GPIO chip 0, which is fine all Pi's *except* the Pi 5
+this attempts to read GPIO chip 0, which is fine on all Pi's *except* the Pi 5
 where you will need to read GPIO chip 4 specifically:
 
 .. code-block:: console
