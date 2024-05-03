@@ -510,7 +510,6 @@ def setmode(new_mode):
     :param int new_mode:
         The new numbering mode to apply
     """
-    # TODO atexit cleanup of claimed GPIOs to input
     global _mode, _chip
 
     if _mode != UNKNOWN and new_mode != _mode:
