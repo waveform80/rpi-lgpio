@@ -9,6 +9,15 @@ Changelog
 .. currentmodule:: RPi.GPIO
 
 
+Release 0.6 (2024-05-11)
+========================
+
+* Use a smarter algorithm for determining the gpiochip device to open (`#10`_)
+* Add a minimum compatible version to the lgpio dependency
+
+.. _#10: https://github.com/waveform80/rpi-lgpio/issues/10
+
+
 Release 0.5 (2024-04-12)
 ========================
 
