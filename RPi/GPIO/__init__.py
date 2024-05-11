@@ -7,6 +7,7 @@ import sys
 import struct
 import warnings
 from time import sleep
+from pathlib import Path
 from threading import Event
 from weakref import WeakValueDictionary
 
@@ -484,6 +485,36 @@ def _get_rpi_info():
     }
 
 
+def _get_gpiochip_num():
+    """
+    Determines the number of the GPIO chip device to access.
+
+    If :envvar:`RPI_LGPIO_CHIP` is found in the environment, it will be used.
+    Otherwise, the routine will attempt to query sysfs to find a GPIO chip
+    device with a driver known to be used for userspace GPIO access. If none
+    can be found, returns 0 as a fallback.
+    """
+    try:
+        return int(os.environ['RPI_LGPIO_CHIP'])
+    except KeyError:
+        # The following are the driver names used for the GPIO chip devices
+        # intended for userspace control
+        user_gpio_drivers = frozenset((
+            'raspberrypi,rp1-gpio',
+            'raspberrypi,bcm2835-gpio',
+            'raspberrypi,bcm2711-gpio',
+        ))
+        for dev in Path('/sys/bus/gpio/devices').glob('gpiochip*'):
+            compatible = (dev / 'of_node/compatible')
+            try:
+                drivers = set(compatible.read_text().split('\0'))
+            except FileNotFoundError:
+                continue
+            if drivers & user_gpio_drivers:
+                return int(dev.name[len('gpiochip'):])
+    return 0
+
+
 def getmode():
     """
     Get the numbering mode used for the pins on the board. Returns
@@ -518,10 +549,7 @@ def setmode(new_mode):
         raise ValueError('An invalid mode was passed to setmode()')
 
     if _chip is None:
-        chip_num = os.environ.get('RPI_LGPIO_CHIP')
-        if chip_num is None:
-            chip_num = 4 if _get_rpi_info()['PROCESSOR'] == 'BCM2712' else 0
-        _chip = _check(lgpio.gpiochip_open(int(chip_num)))
+        _chip = _check(lgpio.gpiochip_open(_get_gpiochip_num()))
     _mode = new_mode
 
 
